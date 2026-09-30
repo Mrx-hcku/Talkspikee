@@ -1,1 +1,73 @@
+name: Build Flutter APK & Get SH1
 
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Fix and Recreate Clean Android Platform
+        run: |
+          echo "Purana adhoora android folder saaf karke fresh setup bana rahe hain..."
+          
+          # Agar google-services.json pehle se hai toh use backup kar lo
+          if [ -f "android/google-services.json" ]; then
+            cp android/google-services.json ./google-services.json.bak
+          elif [ -f "android/app/google-services.json" ]; then
+            cp android/app/google-services.json ./google-services.json.bak
+          fi
+
+          # Adhoore android folder ko delete karo
+          rm -rf android
+
+          # Flutter ke zariye ekdam clean aur complete android platform generate karo
+          flutter create . --platforms=android
+
+          # google-services.json ko uske sahi path (android/app/) par wapas rakho
+          if [ -f "./google-services.json.bak" ]; then
+            mkdir -p android/app
+            mv ./google-services.json.bak android/app/google-services.json
+            echo "google-services.json ko sahi jagah restore kar diya gaya hai."
+          fi
+
+      - name: Grant Execute Permission for Gradlew
+        run: |
+          cd android
+          chmod +x gradlew
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK (Release)
+        run: flutter build apk --release
+
+      - name: Print Signing Report (SH1 & SHA256)
+        run: |
+          cd android
+          ./gradlew signingReport
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
