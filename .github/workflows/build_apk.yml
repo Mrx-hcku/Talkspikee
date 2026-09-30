@@ -1,8 +1,9 @@
-name: Build Flutter APK
+name: Build Flutter APK & Get SH1
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -28,3 +29,15 @@ jobs:
 
       - name: Build APK
         run: flutter build apk --release
+
+      - name: Print Signing Report (SH1 & SHA256 Key)
+        run: |
+          cd android
+          ./gradlew signingReport
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          
