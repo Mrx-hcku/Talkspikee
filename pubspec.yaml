@@ -1,19 +1,18 @@
-
 name: talkspike
 description: A text-first community discussion platform
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.24.2
-  cloud_firestore: ^4.14.0
+  firebase_core: ^2.27.0
+  cloud_firestore: ^4.15.8
   firebase_auth: ^4.17.8
-  google_sign_in: ^6.2.1
+  google_sign_in: ^6.2.2
   firebase_messaging: ^14.7.19
 
 dev_dependencies:
@@ -23,3 +22,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
