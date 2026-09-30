@@ -30,7 +30,7 @@ jobs:
         run: |
           echo "Purana adhoora android folder saaf karke fresh setup bana rahe hain..."
           
-          # Agar google-services.json pehle se hai toh use backup kar lo
+          # google-services.json ka backup lo agar hai
           if [ -f "android/google-services.json" ]; then
             cp android/google-services.json ./google-services.json.bak
           elif [ -f "android/app/google-services.json" ]; then
@@ -40,14 +40,14 @@ jobs:
           # Adhoore android folder ko delete karo
           rm -rf android
 
-          # Flutter ke zariye ekdam clean aur complete android platform generate karo
-          flutter create . --platforms=android
+          # Project name explicitly pass karke android platform generate karo
+          flutter create . --platforms=android --project-name talkspike
 
-          # google-services.json ko uske sahi path (android/app/) par wapas rakho
+          # google-services.json ko wapas restore karo
           if [ -f "./google-services.json.bak" ]; then
             mkdir -p android/app
             mv ./google-services.json.bak android/app/google-services.json
-            echo "google-services.json ko sahi jagah restore kar diya gaya hai."
+            echo "google-services.json restore ho gaya hai."
           fi
 
       - name: Grant Execute Permission for Gradlew
