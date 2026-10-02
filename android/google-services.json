@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "729032757435",
+    "project_id": "twitter-clone-f467f",
+    "storage_bucket": "twitter-clone-f467f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:729032757435:android:4f6b3a1d2a2ac47032199e",
+        "android_client_info": {
+          "package_name": "com.example.talkspike"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "729032757435-grk659emqm39qe108bv4g6n8edfkstul.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.talkspike",
+            "certificate_hash": "9600032308e845ecf5580024c348770032443262"
+          }
+        },
+        {
+          "client_id": "729032757435-5n6o940a4rbnncblidla99lg8uub9bes.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpbJ0xj-3XDH4kOOTRIchCVMvGLF0bRK0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "729032757435-5n6o940a4rbnncblidla99lg8uub9bes.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
