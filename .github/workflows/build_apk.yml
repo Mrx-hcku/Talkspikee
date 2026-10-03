@@ -49,20 +49,19 @@ jobs:
             echo "google-services.json restore ho gaya hai."
           fi
 
-      - name: Fix build.gradle.kts plugins syntax
+      - name: Fix build.gradle plugins syntax
         run: |
           python3 -c '
-          path = "android/app/build.gradle.kts"
-          try:
-              with open(path, "r") as f:
-                  content = f.read()
-              if "com.google.gms.google-services" in content and "plugins {" not in content:
-                  content = "plugins {\n    id(\"com.google.gms.google-services\")\n}\n" + content.replace("id(\"com.google.gms.google-services\")", "").replace("\"com.google.gms.google-services\"", "")
-                  with open(path, "w") as f:
-                      f.write(content)
-                  print("build.gradle.kts syntax fixed successfully.")
-          except Exception as e:
-              print(f"Note: {e}")
+          import os
+          for path in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
+              if os.path.exists(path):
+                  with open(path, "r") as f:
+                      content = f.read()
+                  if "com.google.gms.google-services" in content and "plugins {" not in content:
+                      content = "plugins {\n    id(\"com.google.gms.google-services\")\n}\n" + content.replace("id(\"com.google.gms.google-services\")", "").replace("\"com.google.gms.google-services\"", "")
+                      with open(path, "w") as f:
+                          f.write(content)
+                      print(f"Syntax fixed in {path}")
           '
 
       - name: Setup Persistent Keystore & Signing Config
@@ -71,16 +70,13 @@ jobs:
           
           mkdir -p android/app
 
-          # Agar root mein key.jks nahi hai (pehli baar build ho raha hai), toh naya permanent keystore generate kar lo
           if [ ! -f "./key.jks" ]; then
             echo "Naya permanent keystore generate kiya ja raha hai..."
             keytool -genkey -v -keystore ./key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key -storepass android123 -keypass android123 -dname "CN=Android, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=IN"
           fi
 
-          # key.jks ko android/app me copy karo
           cp ./key.jks android/app/key.jks
 
-          # key.properties create karo
           cat << 'EOF' > android/key.properties
           storePassword=android123
           keyPassword=android123
@@ -88,14 +84,19 @@ jobs:
           storeFile=key.jks
           EOF
 
-          # build.gradle.kts mein signing config inject karna
           python3 -c '
+          import os
           path = "android/app/build.gradle.kts"
-          with open(path, "r") as f:
-              content = f.read()
+          if not os.path.exists(path):
+              path = "android/app/build.gradle"
 
-          if "signingConfigs" not in content:
-              properties_code = """
+          if os.path.exists(path):
+              with open(path, "r") as f:
+                  content = f.read()
+
+              if "signingConfigs" not in content:
+                  if path.endswith(".kts"):
+                      properties_code = """
           import java.util.Properties
           import java.io.FileInputStream
 
@@ -105,9 +106,7 @@ jobs:
               keystoreProperties.load(FileInputStream(keystorePropertiesFile))
           }
           """
-              content = properties_code + content
-
-              signing_block = """
+                      signing_block = """
               signingConfigs {
                   create("release") {
                       keyAlias = keystoreProperties.getProperty("keyAlias")
@@ -122,10 +121,35 @@ jobs:
                   }
               }
           """
-              content = content.replace("android {", "android {" + signing_block)
-              with open(path, "w") as f:
-                  f.write(content)
-              print("Signing config successfully added to build.gradle.kts")
+                  else:
+                      properties_code = """
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+          """
+                      signing_block = """
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties.getProperty("keyAlias")
+                      keyPassword keystoreProperties.getProperty("keyPassword")
+                      storeFile keystoreProperties.getProperty("storeFile") ? file(keystoreProperties.getProperty("storeFile")) : null
+                      storePassword keystoreProperties.getProperty("storePassword")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          """
+
+                  content = properties_code + content
+                  content = content.replace("android {", "android {" + signing_block)
+                  with open(path, "w") as f:
+                      f.write(content)
+                  print(f"Signing config successfully added to {path}")
           '
 
       - name: Grant Execute Permission for Gradlew
