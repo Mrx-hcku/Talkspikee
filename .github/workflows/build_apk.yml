@@ -26,12 +26,27 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Verify google-services.json
+      - name: Fix and Recreate Clean Android Platform & Preserve Keystore
         run: |
-          if [ -f "android/app/google-services.json" ]; then
-            echo "google-services.json present hai."
-          else
-            echo "Warning: android/app/google-services.json nahi mila!"
+          echo "Purana android folder saaf karne se pehle agar key.jks hai toh backup le rahe hain..."
+          
+          if [ -f "android/google-services.json" ]; then
+            cp android/google-services.json ./google-services.json.bak
+          elif [ -f "android/app/google-services.json" ]; then
+            cp android/app/google-services.json ./google-services.json.bak
+          fi
+
+          if [ -f "android/app/key.jks" ]; then
+            cp android/app/key.jks ./key.jks
+          fi
+
+          rm -rf android
+          flutter create . --platforms=android --project-name talkspike
+
+          if [ -f "./google-services.json.bak" ]; then
+            mkdir -p android/app
+            mv ./google-services.json.bak android/app/google-services.json
+            echo "google-services.json restore ho gaya hai."
           fi
 
       - name: Fix build.gradle.kts plugins syntax
@@ -48,6 +63,69 @@ jobs:
                   print("build.gradle.kts syntax fixed successfully.")
           except Exception as e:
               print(f"Note: {e}")
+          '
+
+      - name: Setup Persistent Keystore & Signing Config
+        run: |
+          echo "Persistent keystore aur signing configuration setup ho rahi hai..."
+          
+          mkdir -p android/app
+
+          # Agar root mein key.jks nahi hai (pehli baar build ho raha hai), toh naya permanent keystore generate kar lo
+          if [ ! -f "./key.jks" ]; then
+            echo "Naya permanent keystore generate kiya ja raha hai..."
+            keytool -genkey -v -keystore ./key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key -storepass android123 -keypass android123 -dname "CN=Android, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=IN"
+          fi
+
+          # key.jks ko android/app me copy karo
+          cp ./key.jks android/app/key.jks
+
+          # key.properties create karo
+          cat << 'EOF' > android/key.properties
+          storePassword=android123
+          keyPassword=android123
+          keyAlias=key
+          storeFile=key.jks
+          EOF
+
+          # build.gradle.kts mein signing config inject karna
+          python3 -c '
+          path = "android/app/build.gradle.kts"
+          with open(path, "r") as f:
+              content = f.read()
+
+          if "signingConfigs" not in content:
+              properties_code = """
+          import java.util.Properties
+          import java.io.FileInputStream
+
+          val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+          """
+              content = properties_code + content
+
+              signing_block = """
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties.getProperty("keyAlias")
+                      keyPassword = keystoreProperties.getProperty("keyPassword")
+                      storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                      storePassword = keystoreProperties.getProperty("storePassword")
+                  }
+              }
+              buildTypes {
+                  getByName("release") {
+                      signingConfig = signingConfigs.getByName("release")
+                  }
+              }
+          """
+              content = content.replace("android {", "android {" + signing_block)
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Signing config successfully added to build.gradle.kts")
           '
 
       - name: Grant Execute Permission for Gradlew
