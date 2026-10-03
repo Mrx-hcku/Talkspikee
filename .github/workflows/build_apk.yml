@@ -26,23 +26,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Fix and Recreate Clean Android Platform
+      - name: Verify google-services.json
         run: |
-          echo "Purana adhoora android folder saaf karke fresh setup bana rahe hain..."
-          
-          if [ -f "android/google-services.json" ]; then
-            cp android/google-services.json ./google-services.json.bak
-          elif [ -f "android/app/google-services.json" ]; then
-            cp android/app/google-services.json ./google-services.json.bak
-          fi
-
-          rm -rf android
-          flutter create . --platforms=android --project-name talkspike
-
-          if [ -f "./google-services.json.bak" ]; then
-            mkdir -p android/app
-            mv ./google-services.json.bak android/app/google-services.json
-            echo "google-services.json restore ho gaya hai."
+          if [ -f "android/app/google-services.json" ]; then
+            echo "google-services.json present hai."
+          else
+            echo "Warning: android/app/google-services.json nahi mila!"
           fi
 
       - name: Fix build.gradle.kts plugins syntax
@@ -82,4 +71,3 @@ jobs:
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          
